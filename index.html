@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Physics Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
+<style>
+:root{
+  --bg:#050b14; --bg2:#081422; --panel:rgba(20,38,60,.55); --panel-b:rgba(120,200,220,.16);
+  --cyan:#2ee6d6; --blue:#5aa9ff; --green:#7dffb0; --text:#dcebf5; --muted:#7d93a8;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;overflow-x:hidden}
+h1,h2,h3,.disp{font-family:'Space Grotesk',sans-serif}
+button{font-family:inherit;cursor:pointer}
+::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:#1c3450;border-radius:4px}
+
+#bgfx{position:fixed;inset:0;z-index:0;opacity:.55}
+.screen{position:relative;z-index:1;min-height:100%;display:none}
+.screen.active{display:block}
+
+/* topbar */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;gap:10px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;cursor:pointer}
+.brand .dot{width:10px;height:10px;border-radius:50%;background:var(--cyan);box-shadow:0 0 12px var(--cyan)}
+.brand span{font-weight:700;letter-spacing:.02em;font-size:1.05rem}
+.icobtn{width:38px;height:38px;border-radius:10px;border:1px solid var(--panel-b);background:var(--panel);color:var(--text);display:flex;align-items:center;justify-content:center;font-size:1rem;backdrop-filter:blur(8px)}
+.icobtn:hover{border-color:var(--cyan)}
+.topbtns{display:flex;gap:8px}
+
+/* home */
+.hero{max-width:920px;margin:6vh auto 0;padding:0 20px;text-align:center}
+.hero h1{font-size:clamp(2.4rem,7vw,4.2rem);margin:0;letter-spacing:.01em;
+  background:linear-gradient(90deg,var(--cyan),var(--blue));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p.tag{color:var(--muted);font-size:1.05rem;margin-top:10px}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:900px;margin:44px auto 0;padding:0 20px}
+@media(max-width:640px){.modes{grid-template-columns:1fr}}
+.mode-card{background:var(--panel);border:1px solid var(--panel-b);border-radius:16px;padding:28px 24px;text-align:left;
+  backdrop-filter:blur(10px);transition:transform .15s,border-color .15s}
+.mode-card:hover{transform:translateY(-3px);border-color:var(--cyan)}
+.mode-card h2{margin:0 0 8px;font-size:1.4rem}
+.mode-card p{color:var(--muted);margin:0 0 16px;font-size:.92rem;line-height:1.5}
+.mode-card .go{color:var(--cyan);font-size:.85rem;font-weight:600}
+.foot-line{text-align:center;color:var(--muted);margin:40px 0 20px;font-size:.85rem}
+
+/* layout for learn/experiment */
+.appwrap{display:flex;height:calc(100vh - 62px)}
+@media(max-width:800px){.appwrap{flex-direction:column;height:auto}}
+.side{width:260px;flex:none;border-right:1px solid var(--panel-b);padding:16px;overflow-y:auto}
+@media(max-width:800px){.side{width:100%;border-right:none;border-bottom:1px solid var(--panel-b);max-height:200px}}
+.side h3{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:14px 0 8px}
+.catbtn{display:block;width:100%;text-align:left;background:none;border:none;color:var(--text);padding:7px 10px;border-radius:8px;font-size:.9rem}
+.catbtn:hover,.catbtn.active{background:var(--panel);color:var(--cyan)}
+.search{width:100%;padding:9px 12px;border-radius:10px;border:1px solid var(--panel-b);background:var(--bg2);color:var(--text);font-size:.9rem}
+.main{flex:1;overflow-y:auto;padding:20px}
+
+.topiclist{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.topiccard{background:var(--panel);border:1px solid var(--panel-b);border-radius:12px;padding:14px;text-align:left}
+.topiccard:hover{border-color:var(--cyan)}
+.topiccard h4{margin:0 0 4px;font-size:.98rem}
+.topiccard .cat{color:var(--cyan);font-size:.72rem;text-transform:uppercase;letter-spacing:.05em}
+.diff{display:inline-block;margin-top:8px;font-size:.7rem;padding:2px 8px;border-radius:20px;border:1px solid var(--panel-b);color:var(--muted)}
+
+.detail{max-width:760px}
+.detail .cat{color:var(--cyan);font-size:.78rem;text-transform:uppercase;letter-spacing:.06em}
+.detail h2{margin:4px 0 6px}
+.detail .row{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 18px}
+.pill{background:var(--panel);border:1px solid var(--panel-b);border-radius:20px;padding:4px 12px;font-size:.78rem;color:var(--muted)}
+.card{background:var(--panel);border:1px solid var(--panel-b);border-radius:14px;padding:18px;margin-bottom:16px}
+.card h4{margin:0 0 8px;font-size:.85rem;text-transform:uppercase;letter-spacing:.05em;color:var(--cyan)}
+.formula{font-family:'Space Grotesk',monospace;font-size:1.15rem;background:var(--bg2);padding:10px 14px;border-radius:8px;display:inline-block}
+.btn{background:linear-gradient(90deg,var(--cyan),var(--blue));border:none;color:#031018;font-weight:700;padding:11px 20px;border-radius:10px;font-size:.9rem}
+.btn.ghost{background:none;border:1px solid var(--panel-b);color:var(--text);font-weight:600}
+canvas.viz{width:100%;background:var(--bg2);border-radius:10px;display:block}
+.backbtn{display:inline-flex;align-items:center;gap:6px;color:var(--muted);background:none;border:none;font-size:.85rem;margin-bottom:14px}
+
+/* experiment list */
+.explist{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.expcard{background:var(--panel);border:1px solid var(--panel-b);border-radius:14px;padding:18px;text-align:left}
+.expcard:hover{border-color:var(--cyan)}
+.expcard .tag{font-size:.7rem;color:var(--muted)}
+
+/* experiment run view */
+.runwrap{display:grid;grid-template-columns:1fr 300px;gap:16px}
+@media(max-width:900px){.runwrap{grid-template-columns:1fr}}
+.controls label{display:block;font-size:.78rem;color:var(--muted);margin:12px 0 4px;display:flex;justify-content:space-between}
+.controls input[type=range]{width:100%;accent-color:var(--cyan)}
+.ctrlbtns{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.ctrlbtns button{flex:1;min-width:70px;padding:9px;border-radius:8px;border:1px solid var(--panel-b);background:var(--panel);color:var(--text);font-size:.82rem}
+.ctrlbtns button.primary{background:linear-gradient(90deg,var(--cyan),var(--blue));color:#031018;border:none;font-weight:700}
+.stat{display:flex;justify-content:space-between;font-size:.82rem;color:var(--muted);padding:4px 0}
+.stat b{color:var(--text)}
+.perf{position:fixed;bottom:10px;right:10px;background:rgba(5,15,25,.85);border:1px solid var(--panel-b);border-radius:8px;padding:6px 10px;font-size:.68rem;color:var(--muted);z-index:5;font-family:monospace}
+
+.aerosearch{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.aerosearch input[type=text]{flex:1;min-width:180px;padding:10px 14px;border-radius:10px;border:1px solid var(--panel-b);background:var(--bg2);color:var(--text)}
+.notfound{background:var(--panel);border:1px solid var(--panel-b);border-radius:14px;padding:18px;text-align:center}
+.notfound .opts{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:14px}
+.aerowrap{position:relative}
+#aero3d{width:100%;height:380px;border-radius:10px;background:var(--bg2);touch-action:none}
+.aerobadge{position:absolute;top:10px;left:10px;background:rgba(5,15,25,.75);border:1px solid var(--panel-b);border-radius:8px;padding:4px 10px;font-size:.7rem;color:var(--muted)}
+.chkrow{display:flex;flex-wrap:wrap;gap:10px;font-size:.78rem;color:var(--muted);margin:10px 0}
+.chkrow label{display:flex;gap:5px;align-items:center}
+.numrow{display:flex;gap:8px;align-items:center}
+.numrow input[type=number]{width:70px;padding:5px 7px;border-radius:6px;border:1px solid var(--panel-b);background:var(--bg2);color:var(--text)}
+.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px}
+.est{font-size:.68rem;color:var(--muted);font-style:italic}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,10,.6);display:none;align-items:center;justify-content:center;z-index:20;padding:20px}
+.modal-bg.active{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--panel-b);border-radius:16px;padding:24px;max-width:480px;width:100%;max-height:80vh;overflow-y:auto}
+.modal h3{margin-top:0}
+.modal p{color:var(--muted);font-size:.9rem;line-height:1.6}
+</style>
+</head>
+<body>
+<canvas id="bgfx"></canvas>
+
+<div class="topbar" style="position:sticky;top:0;z-index:10;background:linear-gradient(180deg,rgba(5,11,20,.9),rgba(5,11,20,.6));backdrop-filter:blur(6px)">
+  <div class="brand" onclick="goHome()"><div class="dot"></div><span>PHYSICS LAB</span></div>
+  <div class="topbtns">
+    <button class="icobtn" onclick="toggleFullscreen()" title="Fullscreen">⛶</button>
+    <button class="icobtn" onclick="openModal('settings')" title="Settings">⚙</button>
+    <button class="icobtn" onclick="openModal('about')" title="About">ℹ</button>
+  </div>
+</div>
+
+<!-- HOME -->
+<div class="screen active" id="screen-home">
+  <div class="hero">
+    <h1>PHYSICS LAB</h1>
+    <p class="tag">Explore. Learn. Experiment.</p>
+  </div>
+  <div class="modes">
+    <button class="mode-card" onclick="showLearnList()">
+      <h2>Mode Belajar</h2>
+      <p>Pelajari konsep fisika secara interaktif — penjelasan, visualisasi, rumus, dan contoh nyata di setiap topik.</p>
+      <div class="go">Mulai belajar →</div>
+    </button>
+    <button class="mode-card" onclick="showExpList()">
+      <h2>Mode Eksperimen</h2>
+      <p>Jalankan simulasi fisika langsung, ubah parameter, dan lihat data real-time dari setiap eksperimen.</p>
+      <div class="go">Buka laboratorium →</div>
+    </button>
+  </div>
+  <p class="foot-line">Explore the laws that govern our universe.</p>
+</div>
+
+<!-- LEARN -->
+<div class="screen" id="screen-learn">
+  <div class="appwrap">
+    <div class="side">
+      <input class="search" id="searchbox" placeholder="Search physics..." oninput="renderTopicList()">
+      <h3>Kategori</h3>
+      <div id="catlist"></div>
+    </div>
+    <div class="main" id="learnmain"></div>
+  </div>
+</div>
+
+<!-- EXPERIMENT -->
+<div class="screen" id="screen-exp">
+  <div class="main" style="padding:20px;max-width:1100px;margin:0 auto" id="expmain"></div>
+</div>
+
+<div class="modal-bg" id="modal-settings"><div class="modal">
+  <h3>Settings</h3>
+  <p>Reduced motion, tema gelap, dan satuan SI digunakan secara default.</p>
+  <label style="display:flex;gap:8px;align-items:center;color:var(--muted);font-size:.85rem"><input type="checkbox" id="chkReduced" onchange="setReducedMotion(this.checked)"> Kurangi animasi latar belakang</label>
+  <div style="margin-top:16px;text-align:right"><button class="btn ghost" onclick="closeModal('settings')">Tutup</button></div>
+</div></div>
+
+<div class="modal-bg" id="modal-about"><div class="modal">
+  <h3>About Physics Lab</h3>
+  <p>Physics Lab adalah laboratorium fisika digital dengan Mode Belajar dan Mode Eksperimen. Semua simulasi adalah <b>educational approximation</b> untuk membangun intuisi fisika, bukan pengganti perhitungan atau simulasi ilmiah presisi (mis. CFD profesional).</p>
+  <p>Dibangun dengan HTML, CSS, dan JavaScript murni — tidak memerlukan server atau database.</p>
+  <div style="margin-top:16px;text-align:right"><button class="btn ghost" onclick="closeModal('about')">Tutup</button></div>
+</div></div>
+
+<div class="perf" id="perf">FPS: -- | Sim: 0.0s</div>
+
+<script>
+/* ================= BACKGROUND FX ================= */
+const bgc=document.getElementById('bgfx'),bgx=bgc.getContext('2d');
+let reducedMotion=false;
+function sizeBg(){bgc.width=innerWidth;bgc.height=innerHeight}
+sizeBg();addEventListener('resize',sizeBg);
+let pts=Array.from({length:60},()=>({x:Math.random()*innerWidth,y:Math.random()*innerHeight,vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25}));
+function drawBg(){
+  bgx.clearRect(0,0,bgc.width,bgc.height);
+  bgx.strokeStyle='rgba(46,230,214,.12)';bgx.fillStyle='rgba(90,169,255,.5)';
+  if(!reducedMotion){for(const p of pts){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>bgc.width)p.vx*=-1;if(p.y<0||p.y>bgc.height)p.vy*=-1;}}
+  for(let i=0;i<pts.length;i++){
+    bgx.beginPath();bgx.arc(pts[i].x,pts[i].y,1.6,0,7);bgx.fill();
+    for(let j=i+1;j<pts.length;j++){
+      const dx=pts[i].x-pts[j].x,dy=pts[i].y-pts[j].y,d=Math.hypot(dx,dy);
+      if(d<130){bgx.globalAlpha=1-d/130;bgx.beginPath();bgx.moveTo(pts[i].x,pts[i].y);bgx.lineTo(pts[j].x,pts[j].y);bgx.stroke();bgx.globalAlpha=1;}
+    }
+  }
+  requestAnimationFrame(drawBg);
+}
+requestAnimationFrame(drawBg);
+function setReducedMotion(v){reducedMotion=v}
+
+/* ================= NAV / MODALS ================= */
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0)}
+function goHome(){stopExperiment();stopAero();showScreen('screen-home')}
+function openModal(id){document.getElementById('modal-'+id).classList.add('active')}
+function closeModal(id){document.getElementById('modal-'+id).classList.remove('active')}
+function toggleFullscreen(){
+  if(!document.fullscreenElement){document.documentElement.requestFullscreen?.().catch(()=>alert('Fullscreen tidak didukung browser ini.'))}
+  else{document.exitFullscreen?.()}
+}
+
+/* ================= LEARN DATA ================= */
+const CATS=['Mekanika','Fluida','Termodinamika','Listrik','Magnetisme','Optik','Gelombang','Fisika Modern','Astrofisika','Fisika Lanjutan'];
+const TOPICS=[
+{id:'glbb',cat:'Mekanika',title:'GLBB (Gerak Lurus Berubah Beraturan)',diff:'Dasar',
+ desc:'Gerak lurus dengan percepatan konstan. Kecepatan berubah secara linear terhadap waktu.',
+ formula:'v = v₀ + at    &nbsp; s = v₀t + ½at²',
+ example:'Mobil yang direm dari 100 km/jam hingga berhenti bergerak dengan GLBB (perlambatan konstan).',
+ fact:'Galileo adalah orang pertama yang membuktikan bahwa percepatan gravitasi tidak bergantung pada massa benda.',
+ exp:'projectile'},
+{id:'newton2',cat:'Mekanika',title:'Hukum Newton II',diff:'Dasar',
+ desc:'Percepatan benda berbanding lurus dengan gaya total dan berbanding terbalik dengan massanya.',
+ formula:'F = m·a',
+ example:'Mendorong troli belanja kosong lebih mudah dipercepat dibanding troli penuh, meski gaya dorong sama.',
+ fact:'Newton menulis hukum ini dalam bentuk momentum: F = dp/dt, bukan F=ma secara langsung.',
+ exp:'pendulum'},
+{id:'shm',cat:'Mekanika',title:'Gerak Harmonik Sederhana (Pegas)',diff:'Menengah',
+ desc:'Gerak osilasi di sekitar titik kesetimbangan dengan gaya pemulih sebanding perpindahan.',
+ formula:'F = -kx   &nbsp; T = 2π√(m/k)',
+ example:'Shockbreaker mobil, jam pegas mekanik, dan senar gitar yang dipetik.',
+ fact:'Periode osilasi pegas ideal tidak bergantung pada amplitudo — hanya pada massa dan konstanta pegas.',
+ exp:'spring'},
+{id:'bernoulli',cat:'Fluida',title:'Persamaan Bernoulli',diff:'Menengah',
+ desc:'Hubungan antara tekanan, kecepatan, dan ketinggian fluida sepanjang aliran tanpa gesekan.',
+ formula:'P + ½ρv² + ρgh = konstan',
+ example:'Sayap pesawat menghasilkan gaya angkat karena perbedaan kecepatan aliran udara di atas dan bawah sayap.',
+ fact:'Efek Venturi — dasar dari alat semprot parfum dan karburator — adalah aplikasi langsung Bernoulli.',
+ exp:'circuit'},
+{id:'archimedes',cat:'Fluida',title:'Hukum Archimedes',diff:'Dasar',
+ desc:'Benda yang tercelup dalam fluida mengalami gaya apung sebesar berat fluida yang dipindahkan.',
+ formula:'F_apung = ρ_fluida · V_tercelup · g',
+ example:'Kapal baja bisa mengapung karena bentuknya memindahkan volume air yang besar.',
+ fact:'Konon Archimedes menemukan prinsip ini di bak mandi dan berlari telanjang sambil berteriak "Eureka!"',
+ exp:'projectile'},
+{id:'termo1',cat:'Termodinamika',title:'Hukum I Termodinamika',diff:'Menengah',
+ desc:'Energi tidak dapat diciptakan atau dimusnahkan, hanya berubah bentuk (kekekalan energi).',
+ formula:'ΔU = Q - W',
+ example:'Mesin mobil mengubah energi kalor pembakaran bahan bakar menjadi kerja mekanik.',
+ fact:'Mesin Carnot adalah mesin kalor ideal dengan efisiensi maksimum secara teoretis, tak pernah 100%.',
+ exp:'circuit'},
+{id:'ohm',cat:'Listrik',title:'Hukum Ohm',diff:'Dasar',
+ desc:'Arus listrik yang mengalir melalui konduktor berbanding lurus dengan tegangan dan berbanding terbalik dengan hambatan.',
+ formula:'V = I·R',
+ example:'Dimmer lampu bekerja dengan mengubah hambatan rangkaian untuk mengatur arus dan kecerahan.',
+ fact:'Georg Ohm awalnya diejek komunitas ilmiah Jerman karena hukumnya dianggap terlalu sederhana untuk fisika.',
+ exp:'circuit'},
+{id:'faraday',cat:'Magnetisme',title:'Hukum Induksi Faraday',diff:'Menengah',
+ desc:'Perubahan fluks magnetik menghasilkan gaya gerak listrik (GGL) induksi pada rangkaian.',
+ formula:'ε = -dΦ_B/dt',
+ example:'Generator listrik dan pengisian daya nirkabel (wireless charging) bekerja berdasarkan prinsip ini.',
+ fact:'Tanda negatif pada rumus disebut Hukum Lenz — arus induksi selalu melawan perubahan yang menghasilkannya.',
+ exp:'faraday'},
+{id:'snell',cat:'Optik',title:'Hukum Snell (Refraksi)',diff:'Dasar',
+ desc:'Cahaya membelok ketika melewati batas dua medium dengan indeks bias berbeda.',
+ formula:'n₁ sinθ₁ = n₂ sinθ₂',
+ example:'Sedotan yang tampak "patah" di dalam gelas berisi air adalah akibat refraksi cahaya.',
+ fact:'Refraksi total internal pada sudut kritis adalah prinsip kerja serat optik yang mengirim data internet global.',
+ exp:'pendulum'},
+{id:'doppler',cat:'Gelombang',title:'Efek Doppler',diff:'Menengah',
+ desc:'Perubahan frekuensi gelombang yang teramati akibat gerak relatif sumber dan pengamat.',
+ formula:'f\' = f·(v ± v_obs)/(v ∓ v_src)',
+ example:'Suara sirine ambulans terdengar lebih tinggi saat mendekat dan lebih rendah saat menjauh.',
+ fact:'Efek Doppler pada cahaya (pergeseran merah/redshift) digunakan astronom untuk mengukur ekspansi alam semesta.',
+ exp:'wave'},
+{id:'emc2',cat:'Fisika Modern',title:'Kesetaraan Massa-Energi',diff:'Lanjut',
+ desc:'Massa dan energi adalah dua bentuk dari besaran yang sama dan dapat saling dikonversi.',
+ formula:'E = mc²',
+ example:'Reaksi fusi nuklir di Matahari mengubah sedikit massa hidrogen menjadi energi cahaya dan panas dalam jumlah besar.',
+ fact:'Karena c² sangat besar, konversi massa yang sangat kecil menghasilkan energi yang sangat besar.',
+ exp:'decay'},
+{id:'uncertainty',cat:'Fisika Modern',title:'Prinsip Ketidakpastian Heisenberg',diff:'Lanjut',
+ desc:'Posisi dan momentum sebuah partikel tidak dapat diketahui dengan presisi sempurna secara bersamaan.',
+ formula:'Δx·Δp ≥ ℏ/2',
+ example:'Pada skala elektron dalam atom, posisi elektron hanya bisa digambarkan sebagai awan probabilitas.',
+ fact:'Ini bukan keterbatasan alat ukur, melainkan sifat fundamental alam semesta pada skala kuantum.',
+ exp:'atomic'},
+{id:'kepler',cat:'Astrofisika',title:'Hukum Kepler',diff:'Menengah',
+ desc:'Planet bergerak mengelilingi Matahari dalam orbit elips, dengan kecepatan yang berubah sesuai jaraknya.',
+ formula:'T² ∝ a³',
+ example:'Merkurius mengorbit Matahari jauh lebih cepat daripada Neptunus karena orbitnya jauh lebih kecil.',
+ fact:'Hukum Kepler ditemukan murni dari data pengamatan, lebih dari 50 tahun sebelum hukum gravitasi Newton.',
+ exp:'orbit'},
+{id:'blackhole',cat:'Astrofisika',title:'Lubang Hitam & Event Horizon',diff:'Lanjut',
+ desc:'Wilayah ruang-waktu dengan gravitasi sangat kuat sehingga tidak ada cahaya yang dapat lolos setelah melewati event horizon.',
+ formula:'r_s = 2GM/c²',
+ example:'Lubang hitam supermasif Sagittarius A* berada di pusat galaksi Bimasakti kita.',
+ fact:'Lubang hitam pertama yang berhasil difoto langsung adalah M87* pada tahun 2019.',
+ exp:'orbit'},
+{id:'superconduct',cat:'Fisika Lanjutan',title:'Superkonduktivitas',diff:'Lanjut',
+ desc:'Pada suhu sangat rendah, material tertentu kehilangan hambatan listrik sepenuhnya dan menolak medan magnet (efek Meissner).',
+ formula:'R = 0 (T < T_c)',
+ example:'Kereta maglev dan magnet MRI di rumah sakit menggunakan kumparan superkonduktor.',
+ fact:'Superkonduktor suhu tinggi masih menjadi salah satu misteri terbesar dalam fisika materi terkondensasi.',
+ exp:'circuit'},
+{id:'halfdecay',cat:'Fisika Lanjutan',title:'Peluruhan Radioaktif & Waktu Paruh',diff:'Menengah',
+ desc:'Inti atom tidak stabil meluruh secara acak, dengan jumlah inti tersisa berkurang secara eksponensial.',
+ formula:'N(t) = N₀·(½)^(t/T½)',
+ example:'Penanggalan karbon-14 digunakan arkeolog untuk memperkirakan usia fosil dan artefak kuno.',
+ fact:'Waktu paruh tiap isotop tetap konstan, tidak dipengaruhi suhu, tekanan, atau reaksi kimia apapun.',
+ exp:'decay'},
+];
+let curCat='Semua';
+function renderCatList(){
+  const el=document.getElementById('catlist');
+  el.innerHTML=['Semua',...CATS].map(c=>`<button class="catbtn ${c===curCat?'active':''}" onclick="setCat('${c}')">${c}</button>`).join('');
+}
+function setCat(c){curCat=c;renderCatList();renderTopicList()}
+function showLearnList(){showScreen('screen-learn');curCat='Semua';renderCatList();renderTopicList()}
+function renderTopicList(){
+  const q=(document.getElementById('searchbox').value||'').toLowerCase();
+  const list=TOPICS.filter(t=>(curCat==='Semua'||t.cat===curCat)&&(t.title.toLowerCase().includes(q)||t.cat.toLowerCase().includes(q)));
+  const main=document.getElementById('learnmain');
+  main.innerHTML=`<h2 style="margin-top:0">${curCat==='Semua'?'Semua Topik':curCat}</h2>
+   ${list.length?`<div class="topiclist">${list.map(t=>`
+    <button class="topiccard" onclick="showTopic('${t.id}')">
+      <div class="cat">${t.cat}</div><h4>${t.title}</h4><span class="diff">${t.diff}</span>
+    </button>`).join('')}</div>`:'<p style="color:var(--muted)">Tidak ada topik yang cocok.</p>'}`;
+}
+function showTopic(id){
+  const t=TOPICS.find(x=>x.id===id);
+  const main=document.getElementById('learnmain');
+  main.innerHTML=`
+  <button class="backbtn" onclick="renderTopicList()">← Kembali</button>
+  <div class="detail">
+    <div class="cat">${t.cat}</div>
+    <h2>${t.title}</h2>
+    <div class="row"><span class="pill">Tingkat: ${t.diff}</span></div>
+    <div class="card"><h4>Penjelasan</h4><p>${t.desc}</p></div>
+    <div class="card"><h4>Visualisasi Interaktif</h4>
+      <canvas class="viz" id="topicviz" height="160"></canvas>
+      <div style="margin-top:10px"><label style="font-size:.78rem;color:var(--muted)">Parameter</label>
+      <input type="range" id="topicslider" min="1" max="100" value="50" oninput="drawTopicViz('${t.id}',this.value)"></div>
+    </div>
+    <div class="card"><h4>Rumus</h4><div class="formula">${t.formula}</div></div>
+    <div class="card"><h4>Contoh Kehidupan Nyata</h4><p>${t.example}</p></div>
+    <div class="card"><h4>Fakta Menarik</h4><p>${t.fact}</p></div>
+    <button class="btn" onclick="runExperiment('${t.exp}')">Coba Simulasi →</button>
+  </div>`;
+  drawTopicViz(t.id,50);
+}
+function drawTopicViz(id,val){
+  const cv=document.getElementById('topicviz');if(!cv)return;
+  cv.width=cv.clientWidth;const ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.strokeStyle='#2ee6d6';ctx.lineWidth=2;ctx.beginPath();
+  const p=val/100;
+  for(let x=0;x<cv.width;x++){
+    const t=x/cv.width*8;
+    let y;
+    if(id==='shm'||id==='faraday'||id==='doppler') y=cv.height/2+Math.sin(t*(1+p*3))*cv.height*0.32;
+    else if(id==='halfdecay'||id==='emc2') y=cv.height-10-(cv.height-30)*Math.exp(-t*(0.2+p*0.6));
+    else if(id==='bernoulli'||id==='archimedes') y=cv.height-10-(cv.height-30)*(1-Math.exp(-t*0.4*(0.3+p)));
+    else if(id==='kepler'||id==='blackhole') {y=cv.height/2+Math.sin(t)*cv.height*0.3*Math.exp(-t*0.02);}
+    else y=cv.height-10-(t*(10+p*20))+((t*t)*(1+p*0.3));
+    ctx.lineTo(x,Math.max(6,Math.min(cv.height-6,y)));
+  }
+  ctx.stroke();
+}
+
+/* ================= EXPERIMENT LIST ================= */
+const EXPERIMENTS=[
+ {id:'projectile',name:'Projectile Motion',tag:'Mekanika'},
+ {id:'pendulum',name:'Pendulum',tag:'Mekanika'},
+ {id:'spring',name:'Spring / SHM',tag:'Mekanika'},
+ {id:'circuit',name:'Electric Circuit (Ohm)',tag:'Listrik'},
+ {id:'faraday',name:'Faraday Induction',tag:'Magnetisme'},
+ {id:'wave',name:'Wave & Sound', tag:'Gelombang'},
+ {id:'orbit',name:'Planetary Orbit',tag:'Astrofisika'},
+ {id:'decay',name:'Nuclear Decay',tag:'Fisika Modern'},
+ {id:'atomic',name:'Atomic Lab',tag:'Fisika Modern'},
+ {id:'aero',name:'✈️ Aerodynamics Lab',tag:'Aerodinamika'},
+];
+function showExpList(){
+  showScreen('screen-exp');stopExperiment();stopAero();
+  document.getElementById('expmain').innerHTML=`
+  <h2 style="margin-top:0">Experiment Workspace</h2>
+  <p style="color:var(--muted);margin-top:-8px">Pilih eksperimen untuk mulai mengatur parameter dan mengamati data real-time.</p>
+  <div class="explist">${EXPERIMENTS.map(e=>`
+    <button class="expcard" onclick="runExperiment('${e.id}')"><h4 style="margin:0 0 4px">${e.name}</h4><div class="tag">${e.tag}</div></button>
+  `).join('')}</div>`;
+}
+
+/* ================= EXPERIMENT ENGINE ================= */
+let simState={running:false,t:0,data:[],raf:null,id:null,params:{}};
+function stopExperiment(){if(simState.raf)cancelAnimationFrame(simState.raf);simState.running=false;simState.raf=null}
+
+const EXP_DEFS={
+ projectile:{title:'Projectile Motion',params:[
+   {k:'v0',label:'Kecepatan awal (m/s)',min:5,max:80,val:30},
+   {k:'angle',label:'Sudut (°)',min:0,max:90,val:45},
+   {k:'g',label:'Gravitasi (m/s²)',min:1,max:25,val:9.8},
+   {k:'drag',label:'Hambatan udara',min:0,max:1,val:0.05,step:0.01}],
+  chart:['Ketinggian (m)','Kecepatan (m/s)']},
+ pendulum:{title:'Pendulum',params:[
+   {k:'len',label:'Panjang tali (m)',min:0.2,max:3,val:1,step:0.1},
+   {k:'mass',label:'Massa (kg)',min:0.1,max:5,val:1,step:0.1},
+   {k:'g',label:'Gravitasi (m/s²)',min:1,max:25,val:9.8},
+   {k:'theta0',label:'Sudut awal (°)',min:5,max:80,val:30}],
+  chart:['Sudut (°)','Energi (J)']},
+ spring:{title:'Spring / SHM',params:[
+   {k:'k',label:'Konstanta pegas k (N/m)',min:1,max:100,val:20},
+   {k:'mass',label:'Massa (kg)',min:0.1,max:5,val:1,step:0.1},
+   {k:'x0',label:'Simpangan awal (m)',min:0.1,max:2,val:1,step:0.1}],
+  chart:['Posisi (m)','Kecepatan (m/s)']},
+ circuit:{title:'Electric Circuit (Ohm)',params:[
+   {k:'v',label:'Tegangan (V)',min:1,max:24,val:9},
+   {k:'r',label:'Hambatan (Ω)',min:1,max:100,val:10},
+   {k:'c',label:'Kapasitansi (µF)',min:1,max:1000,val:100}],
+  chart:['Arus (A)','Tegangan Kapasitor (V)']},
+ faraday:{title:'Faraday Induction',params:[
+   {k:'speed',label:'Kecepatan magnet (m/s)',min:0.1,max:5,val:1,step:0.1},
+   {k:'turns',label:'Jumlah lilitan',min:10,max:500,val:100},
+   {k:'field',label:'Kekuatan medan (T)',min:0.1,max:2,val:0.5,step:0.1}],
+  chart:['GGL Induksi (V)','Arus (A)']},
+ wave:{title:'Wave & Sound',params:[
+   {k:'freq',label:'Frekuensi (Hz)',min:0.5,max:10,val:2,step:0.1},
+   {k:'amp',label:'Amplitudo',min:0.1,max:1,val:0.6,step:0.1},
+   {k:'speed',label:'Cepat rambat',min:0.5,max:5,val:2,step:0.1}],
+  chart:['Amplitudo','Frekuensi']},
+ orbit:{title:'Planetary Orbit',params:[
+   {k:'dist',label:'Jarak orbit (AU)',min:0.3,max:5,val:1,step:0.1},
+   {k:'mass',label:'Massa bintang (M☉)',min:0.2,max:10,val:1,step:0.1},
+   {k:'ecc',label:'Eksentrisitas',min:0,max:0.9,val:0.1,step:0.05}],
+  chart:['Kecepatan orbit','Jarak dari bintang']},
+ decay:{title:'Nuclear Decay',params:[
+   {k:'n0',label:'Jumlah inti awal',min:50,max:1000,val:500},
+   {k:'halflife',label:'Waktu paruh (s)',min:1,max:30,val:8}],
+  chart:['Inti tersisa','Laju peluruhan']},
+ atomic:{title:'Atomic Lab',params:[
+   {k:'protons',label:'Proton',min:1,max:20,val:6},
+   {k:'neutrons',label:'Neutron',min:0,max:20,val:6},
+   {k:'electrons',label:'Elektron',min:0,max:20,val:6}],
+  chart:['Energi ikat (rel.)','Muatan bersih']},
+};
+
+function runExperiment(id){
+  if(id==='aero'){showScreen('screen-exp');stopExperiment();stopAero();renderAeroWorkspace();return;}
+  showScreen('screen-exp');stopExperiment();stopAero();
+  const def=EXP_DEFS[id];simState={running:false,t:0,data:[],raf:null,id,params:{}};
+  def.params.forEach(p=>simState.params[p.k]=p.val);
+  const main=document.getElementById('expmain');
+  main.innerHTML=`
+  <button class="backbtn" onclick="showExpList()">← Semua Eksperimen</button>
+  <h2 style="margin-top:0">${def.title}</h2>
+  <div class="runwrap">
+    <div>
+      <canvas class="viz" id="expcanvas" height="320"></canvas>
+      <canvas class="viz" id="expchart" height="140" style="margin-top:12px"></canvas>
+    </div>
+    <div>
+      <div class="card">
+        <h4>Parameter</h4>
+        <div class="controls" id="paramwrap"></div>
+      </div>
+      <div class="card">
+        <h4>Status</h4>
+        <div class="stat"><span>Waktu simulasi</span><b id="statT">0.00 s</b></div>
+        <div class="stat" id="statExtra"></div>
+        <div class="ctrlbtns">
+          <button class="primary" onclick="startSim()">▶ Start</button>
+          <button onclick="pauseSim()">⏸ Pause</button>
+          <button onclick="resetSim()">⟲ Reset</button>
+          <button onclick="stepSim()">⏭ Step</button>
+        </div>
+        <div class="ctrlbtns">
+          <button onclick="exportCSV()">Export CSV</button>
+          <button onclick="downloadConfig()">Download Config</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  const pw=document.getElementById('paramwrap');
+  pw.innerHTML=def.params.map(p=>`
+    <label>${p.label}<span id="val_${p.k}">${p.val}</span></label>
+    <input type="range" min="${p.min}" max="${p.max}" value="${p.val}" step="${p.step||1}" id="ctl_${p.k}"
+      oninput="simState.params['${p.k}']=parseFloat(this.value);document.getElementById('val_${p.k}').textContent=this.value">
+  `).join('');
+  sizeExpCanvas();renderFrame();
+}
+function sizeExpCanvas(){
+  const c1=document.getElementById('expcanvas'),c2=document.getElementById('expchart');
+  if(c1)c1.width=c1.clientWidth;if(c2)c2.width=c2.clientWidth;
+}
+addEventListener('resize',sizeExpCanvas);
+
+function startSim(){if(!simState.id)return;simState.running=true;loop()}
+function pauseSim(){simState.running=false}
+function resetSim(){simState.t=0;simState.data=[];pauseSim();renderFrame()}
+function stepSim(){simState.t+=0.05;simulate();renderFrame()}
+
+let lastFrame=performance.now(),fps=0;
+function loop(){
+  if(!simState.running)return;
+  const now=performance.now();fps=Math.round(1000/(now-lastFrame));lastFrame=now;
+  simState.t+=0.03;simulate();renderFrame();
+  document.getElementById('perf').textContent=`FPS: ${fps} | Sim: ${simState.t.toFixed(1)}s`;
+  simState.raf=requestAnimationFrame(loop);
+}
+
+function simulate(){
+  const p=simState.params,id=simState.id,t=simState.t;let d1=0,d2=0;
+  if(id==='projectile'){
+    const rad=p.angle*Math.PI/180,vx=p.v0*Math.cos(rad),vy0=p.v0*Math.sin(rad);
+    const drag=1-p.drag*0.3;
+    const y=Math.max(0,(vy0*t-0.5*p.g*t*t)*Math.pow(drag,t));
+    const v=Math.sqrt(vx*vx+(vy0-p.g*t)*(vy0-p.g*t));
+    d1=y;d2=v;simState._x=vx*t*Math.pow(drag,t);simState._y=y;
+    if(y<=0&&t>0.3)simState.running=false;
+  } else if(id==='pendulum'){
+    const th0=p.theta0*Math.PI/180,w=Math.sqrt(p.g/p.len);
+    const th=th0*Math.cos(w*t);
+    const E=0.5*p.mass*p.g*p.len*(1-Math.cos(Math.abs(th)))+0.5*p.mass*(p.len*w*th0*Math.sin(w*t))**2;
+    d1=th*180/Math.PI;d2=E;simState._theta=th;
+  } else if(id==='spring'){
+    const w=Math.sqrt(p.k/p.mass),x=p.x0*Math.cos(w*t),v=-p.x0*w*Math.sin(w*t);
+    d1=x;d2=v;simState._x=x;
+  } else if(id==='circuit'){
+    const tau=(p.r*p.c*1e-6),vc=p.v*(1-Math.exp(-t/Math.max(tau,0.01)));
+    const i=(p.v-vc)/p.r;d1=i;d2=vc;simState._vc=vc;simState._i=i;
+  } else if(id==='faraday'){
+    const pos=Math.sin(t*p.speed);const dphi=p.field*Math.cos(t*p.speed)*p.speed;
+    const emf=-p.turns*dphi*0.02;d1=emf;d2=emf/10;simState._pos=pos;simState._emf=emf;
+  } else if(id==='wave'){
+    d1=p.amp*Math.sin(t*p.freq);d2=p.freq;
+  } else if(id==='orbit'){
+    const w=Math.sqrt(p.mass/(p.dist**3))*0.6;const ang=t*w;
+    const r=p.dist*(1-p.ecc*p.ecc)/(1+p.ecc*Math.cos(ang));
+    d1=Math.sqrt(p.mass/r);d2=r;simState._ang=ang;simState._r=r;
+  } else if(id==='decay'){
+    const lambda=Math.log(2)/p.halflife;const n=p.n0*Math.exp(-lambda*t);
+    d1=n;d2=n*lambda;simState._n=n;
+  } else if(id==='atomic'){
+    d1=(p.protons+p.neutrons)*0.85-p.protons*0.3;d2=p.protons-p.electrons;
+  }
+  simState.data.push({t,d1,d2});
+  if(simState.data.length>300)simState.data.shift();
+}
+
+function renderFrame(){
+  const c=document.getElementById('expcanvas');if(!c)return;
+  const ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);
+  const W=c.width,H=c.height,id=simState.id,p=simState.params;
+  ctx.strokeStyle='#12283f';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(0,H-30);ctx.lineTo(W,H-30);ctx.stroke();
+
+  if(id==='projectile'){
+    const rad=p.angle*Math.PI/180,vx=p.v0*Math.cos(rad),vy0=p.v0*Math.sin(rad);
+    const scale=Math.min(W/(p.v0*4+10),(H-40)/(vy0*vy0/(2*p.g)+5));
+    ctx.strokeStyle='#2ee6d6';ctx.beginPath();
+    for(let tt=0;tt<=simState.t+0.001;tt+=0.03){
+      const drag=1-p.drag*0.3;
+      const x=vx*tt*Math.pow(drag,tt),y=Math.max(0,(vy0*tt-0.5*p.g*tt*tt)*Math.pow(drag,tt));
+      const px=x*scale+20,py=H-30-y*scale;
+      tt===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
+    }
+    ctx.stroke();
+    const x=(simState._x||0)*scale+20,y=H-30-(simState._y||0)*scale;
+    dot(ctx,x,y,'#7dffb0');
+  } else if(id==='pendulum'){
+    const cx=W/2,cy=30,L=Math.min(H-70,120+p.len*50);
+    const th=simState._theta||0;
+    const bx=cx+L*Math.sin(th),by=cy+L*Math.cos(th);
+    ctx.strokeStyle='#5aa9ff';ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(bx,by);ctx.stroke();
+    dot(ctx,cx,cy,'#7d93a8',4);dot(ctx,bx,by,'#2ee6d6',8+p.mass*2);
+  } else if(id==='spring'){
+    const cx=W/2,baseY=40,L=100+((simState._x||0)*40);
+    ctx.strokeStyle='#5aa9ff';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx,baseY);
+    const coils=12;for(let i=0;i<=coils;i++){const yy=baseY+(L/coils)*i;const xx=cx+((i%2===0)?-14:14);ctx.lineTo(xx,yy);}
+    ctx.stroke();
+    dot(ctx,cx,baseY+L,'#2ee6d6',10+p.mass*2);
+  } else if(id==='circuit'){
+    ctx.strokeStyle='#5aa9ff';ctx.lineWidth=2;
+    ctx.strokeRect(40,40,W-80,H-100);
+    ctx.fillStyle='#7dffb0';ctx.font='13px monospace';
+    ctx.fillText(`I = ${(simState._i||0).toFixed(3)} A`,50,30);
+    ctx.fillText(`V_C = ${(simState._vc||0).toFixed(2)} V`,W-150,30);
+    const glow=Math.min(1,(simState._i||0)*3);
+    ctx.fillStyle=`rgba(46,230,214,${0.2+glow*0.6})`;ctx.fillRect(45,45,W-90,H-110);
+  } else if(id==='faraday'){
+    const cx=W/2,cy=H/2;
+    ctx.strokeStyle='#5aa9ff';ctx.lineWidth=3;
+    for(let i=0;i<5;i++){ctx.beginPath();ctx.ellipse(cx,cy,50,18,0,0,7);ctx.stroke();}
+    const mx=cx+(simState._pos||0)*140;
+    ctx.fillStyle='#ff6b6b';ctx.fillRect(mx-10,cy-40,20,80);
+    ctx.fillStyle='#dcebf5';ctx.font='12px monospace';ctx.fillText(`ε = ${(simState._emf||0).toFixed(2)} V`,20,25);
+  } else if(id==='wave'){
+    ctx.strokeStyle='#2ee6d6';ctx.lineWidth=2;ctx.beginPath();
+    for(let x=0;x<W;x++){
+      const y=H/2+Math.sin(x*0.03*p.freq-simState.t*3)*p.amp*(H/2-20);
+      x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+  } else if(id==='orbit'){
+    const cx=W/2,cy=H/2,scale=(Math.min(W,H)/2-30)/5;
+    dot(ctx,cx,cy,'#ffd166',10);
+    const r=(simState._r||p.dist)*scale,ang=simState._ang||0;
+    ctx.strokeStyle='#12283f';ctx.beginPath();ctx.arc(cx,cy,p.dist*scale,0,7);ctx.stroke();
+    dot(ctx,cx+r*Math.cos(ang),cy+r*Math.sin(ang),'#5aa9ff',7);
+  } else if(id==='decay'){
+    const n=simState._n!==undefined?simState._n:p.n0;
+    const cols=20,rows=Math.ceil(p.n0/cols);
+    const cell=Math.min((W-20)/cols,(H-40)/rows);
+    let shown=Math.round(n);
+    for(let i=0;i<p.n0;i++){
+      const cx2=20+(i%cols)*cell,cy2=20+Math.floor(i/cols)*cell;
+      ctx.fillStyle=i<shown?'#2ee6d6':'#132436';
+      ctx.beginPath();ctx.arc(cx2,cy2,cell*0.3,0,7);ctx.fill();
+    }
+  } else if(id==='atomic'){
+    const cx=W/2,cy=H/2;
+    ctx.fillStyle='#ff6b6b';for(let i=0;i<p.protons;i++){const a=i*2.4;dot(ctx,cx+Math.cos(a)*6,cy+Math.sin(a)*6,'#ff6b6b',4);}
+    ctx.fillStyle='#5aa9ff';for(let i=0;i<p.neutrons;i++){const a=i*2.1+1;dot(ctx,cx+Math.cos(a)*6,cy+Math.sin(a)*6,'#5aa9ff',4);}
+    for(let sh=0;sh<3;sh++){const rr=40+sh*35;ctx.strokeStyle='#12283f';ctx.beginPath();ctx.arc(cx,cy,rr,0,7);ctx.stroke();}
+    let e=0;
+    for(let sh=0;sh<3&&e<p.electrons;sh++){
+      const cap=2+sh*4,rr=40+sh*35;
+      for(let k=0;k<cap&&e<p.electrons;k++,e++){
+        const a=simState.t*(1.5-sh*0.3)+k*(6.28/cap);
+        dot(ctx,cx+Math.cos(a)*rr,cy+Math.sin(a)*rr,'#7dffb0',5);
+      }
+    }
+  }
+  document.getElementById('statT').textContent=simState.t.toFixed(2)+' s';
+  const extra=document.getElementById('statExtra');
+  const last=simState.data[simState.data.length-1];
+  if(extra&&last){const def=EXP_DEFS[id];extra.innerHTML=`<div class="stat"><span>${def.chart[0]}</span><b>${last.d1.toFixed(2)}</b></div><div class="stat"><span>${def.chart[1]}</span><b>${last.d2.toFixed(2)}</b></div>`;}
+  drawChart();
+}
+function dot(ctx,x,y,color,r=6){ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill();ctx.shadowColor=color;ctx.shadowBlur=8;ctx.fill();ctx.shadowBlur=0;}
+
+function drawChart(){
+  const c=document.getElementById('expchart');if(!c)return;
+  const ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);
+  const data=simState.data;if(data.length<2)return;
+  const W=c.width,H=c.height;
+  const all1=data.map(d=>d.d1),all2=data.map(d=>d.d2);
+  const min1=Math.min(...all1),max1=Math.max(...all1,min1+0.001);
+  const min2=Math.min(...all2),max2=Math.max(...all2,min2+0.001);
+  function line(vals,min,max,color){
+    ctx.strokeStyle=color;ctx.lineWidth=2;ctx.beginPath();
+    vals.forEach((v,i)=>{const x=i/(data.length-1)*W;const y=H-8-((v-min)/(max-min))*(H-16);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+    ctx.stroke();
+  }
+  line(all1,min1,max1,'#2ee6d6');line(all2,min2,max2,'#5aa9ff');
+  const def=EXP_DEFS[simState.id];
+  ctx.font='10px monospace';ctx.fillStyle='#2ee6d6';ctx.fillText(def.chart[0],8,12);
+  ctx.fillStyle='#5aa9ff';ctx.fillText(def.chart[1],8,24);
+}
+
+function exportCSV(){
+  if(!simState.data.length){alert('Belum ada data. Jalankan simulasi terlebih dahulu.');return;}
+  const def=EXP_DEFS[simState.id];
+  let csv=`t,${def.chart[0]},${def.chart[1]}\n`;
+  simState.data.forEach(d=>csv+=`${d.t.toFixed(3)},${d.d1.toFixed(4)},${d.d2.toFixed(4)}\n`);
+  downloadBlob(csv,`${simState.id}_data.csv`,'text/csv');
+}
+function downloadConfig(){
+  const cfg={experiment:simState.id,params:simState.params,t:simState.t};
+  downloadBlob(JSON.stringify(cfg,null,2),`${simState.id}_config.json`,'application/json');
+}
+function downloadBlob(content,name,type){
+  const blob=new Blob([content],{type});const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);
+}
+
+/* ================= AERODYNAMICS LAB ================= */
+const AERO_PRESETS=[
+ {keys:['sr-71','sr71','blackbird'],name:'SR-71 Blackbird',type:'plane',S:150,L:32.7,base:{cl:0.25,cd:0.055}},
+ {keys:['f-22','f22','raptor'],name:'F-22 Raptor',type:'plane',S:78,L:18.9,base:{cl:0.3,cd:0.045}},
+ {keys:['f-35'],name:'F-35',type:'plane',S:63,L:15.7,base:{cl:0.3,cd:0.04}},
+ {keys:['747','boeing 747','boeing'],name:'Boeing 747',type:'plane',S:511,L:70.6,base:{cl:0.4,cd:0.03}},
+ {keys:['a380','airbus'],name:'Airbus A380',type:'plane',S:845,L:72.7,base:{cl:0.4,cd:0.032}},
+ {keys:['wing','sayap'],name:'Wing Section',type:'wing',S:10,L:2,base:{cl:0.6,cd:0.02}},
+ {keys:['car','mobil'],name:'Generic Car',type:'car',S:2.2,L:4.5,base:{cl:0.05,cd:0.32}},
+ {keys:['ball','bola','sphere'],name:'Sphere',type:'sphere',S:0.28,L:0.6,base:{cl:0.02,cd:0.47}},
+ {keys:['cube','kubus','box'],name:'Cube',type:'box',S:1,L:1,base:{cl:0.0,cd:1.05}},
+ {keys:['cylinder','silinder'],name:'Cylinder',type:'cylinder',S:0.8,L:1,base:{cl:0.05,cd:0.9}},
+];
+let aero={scene:null,camera:null,renderer:null,controls:null,mesh:null,particles:null,arrowL:null,arrowD:null,raf:null,t:0,running:false,
+  params:{v:100,aoa:5,rho:1.225,temp:15,alt:0,S:10,L:2,quality:'medium'},preset:null,source:'-',showFlow:true,showGrid:true,showAxes:true,
+  showLift:true,showDrag:true,pressure:false,data:[]};
+
+function renderAeroWorkspace(){
+  const main=document.getElementById('expmain');
+  main.innerHTML=`
+  <button class="backbtn" onclick="stopAero();showExpList()">← Back to Experiments</button>
+  <h2 style="margin-top:0">Aerodynamics Lab</h2>
+  <p style="color:var(--muted);margin-top:-8px">Interactive aerodynamic simulation — educational approximation, bukan CFD profesional.</p>
+  <div class="aerosearch">
+    <input type="text" id="aeroSearch" placeholder="Search aircraft / vehicle / object... (mis. SR-71 Blackbird, car, sphere)">
+    <button class="btn" onclick="aeroDoSearch()">SEARCH</button>
+    <button class="icobtn" onclick="toggleFullscreen()" title="Fullscreen">⛶</button>
+  </div>
+  <div id="aeroBody"></div>`;
+  aeroLoadObject(AERO_PRESETS[6],'Generated Primitive'); // default: car
+}
+function aeroDoSearch(){
+  const q=(document.getElementById('aeroSearch').value||'').trim().toLowerCase();
+  if(!q)return;
+  const hit=AERO_PRESETS.find(p=>p.keys.some(k=>q.includes(k))||q.includes(p.name.toLowerCase()));
+  if(hit){aeroLoadObject(hit,'Generated Primitive');}
+  else{
+    document.getElementById('aeroBody').innerHTML=`<div class="notfound">
+      <h3 style="margin:0 0 6px">3D model not found</h3>
+      <p style="color:var(--muted);margin:0">Tidak ada model untuk "${q.replace(/</g,'')}". Pilih salah satu opsi:</p>
+      <div class="opts">
+        <button class="btn" onclick='aeroLoadObject({name:"${q.replace(/'/g,"")}",type:"box",S:2,L:2,base:{cl:0.1,cd:0.6}},"Approximate")'>Generate Approximate Model</button>
+        <button class="btn ghost" onclick='aeroLoadObject({name:"${q.replace(/'/g,"")}",type:"sphere",S:0.28,L:0.6,base:{cl:0.02,cd:0.47}},"Basic Shape")'>Use Basic Shape</button>
+        <button class="btn ghost" onclick="document.getElementById('aeroUpload').click()">Upload Your Own Model</button>
+      </div>
+      <input type="file" id="aeroUpload" accept=".glb,.gltf,.obj,.stl" style="display:none" onchange="aeroHandleUpload(event)">
+    </div>`;
+  }
+}
+function aeroLoadObject(preset,source){
+  aero.preset=preset;aero.source=source;aero.params.S=preset.S;aero.params.L=preset.L;
+  const body=document.getElementById('aeroBody');
+  body.innerHTML=`
+  <div class="runwrap">
+    <div>
+      <div class="aerowrap"><canvas id="aero3d"></canvas><div class="aerobadge" id="aeroBadge"></div></div>
+      <div class="chkrow">
+        <label><input type="checkbox" id="ckFlow" checked onchange="aero.showFlow=this.checked"> Show Airflow</label>
+        <label><input type="checkbox" id="ckGrid" checked onchange="aero.showGrid=this.checked;aeroGrid.visible=this.checked"> Show Grid</label>
+        <label><input type="checkbox" id="ckAxes" checked onchange="aero.showAxes=this.checked;aeroAxes.visible=this.checked"> Show Axes</label>
+        <label><input type="checkbox" id="ckLift" checked onchange="aero.showLift=this.checked"> Show Lift</label>
+        <label><input type="checkbox" id="ckDrag" checked onchange="aero.showDrag=this.checked"> Show Drag</label>
+        <label><input type="checkbox" id="ckPress" onchange="aeroTogglePressure(this.checked)"> Pressure View</label>
+      </div>
+      <p class="est">Pressure visualization is an educational approximation.</p>
+      <canvas class="viz" id="aerochart" height="130"></canvas>
+      <div class="ctrlbtns"><button onclick="aeroClearChart()">Clear Graph</button><button class="ghost" onclick="aeroResetView()">Reset View</button></div>
+    </div>
+    <div>
+      <div class="card"><h4>Aerodynamic Parameters</h4>
+        <label>Air Velocity (m/s) <span id="v_v">${aero.params.v}</span></label>
+        <input type="range" min="1" max="400" value="${aero.params.v}" oninput="aeroSet('v',this.value)">
+        <div class="numrow"><input type="number" id="num_v" value="${aero.params.v}" oninput="aeroSet('v',this.value)"></div>
+        <label>Angle of Attack (°) <span id="v_aoa">${aero.params.aoa}</span></label>
+        <input type="range" min="-20" max="30" value="${aero.params.aoa}" oninput="aeroSet('aoa',this.value)">
+        <label>Air Density (kg/m³) <span id="v_rho">${aero.params.rho}</span></label>
+        <input type="range" min="0.3" max="1.4" step="0.01" value="${aero.params.rho}" oninput="aeroSet('rho',this.value)">
+        <label>Temperature (°C) <span id="v_temp">${aero.params.temp}</span></label>
+        <input type="range" min="-60" max="45" value="${aero.params.temp}" oninput="aeroSet('temp',this.value)">
+        <label>Altitude (m) <span id="v_alt">${aero.params.alt}</span></label>
+        <input type="range" min="0" max="15000" step="100" value="${aero.params.alt}" oninput="aeroSet('alt',this.value)">
+        <label>Reference Area S (m², estimated) <span id="v_S">${aero.params.S}</span></label>
+        <input type="range" min="0.1" max="900" step="0.1" value="${aero.params.S}" oninput="aeroSet('S',this.value)">
+        <label>Quality</label>
+        <select id="aeroQuality" onchange="aeroSetQuality(this.value)" style="width:100%;padding:7px;border-radius:8px;background:var(--bg2);color:var(--text);border:1px solid var(--panel-b)">
+          <option value="low">LOW</option><option value="medium" selected>MEDIUM</option><option value="high">HIGH</option>
+        </select>
+        <div class="ctrlbtns">
+          <button class="primary" onclick="aeroStart()">▶ Start</button>
+          <button onclick="aeroPause()">⏸ Pause</button>
+          <button onclick="aeroReset()">⟲ Reset</button>
+          <button onclick="aeroStep()">⏭ Step</button>
+        </div>
+      </div>
+      <div class="card"><h4>Object</h4>
+        <div class="dgrid"><span>Name</span><b id="oName"></b><span>Source</span><b id="oSrc"></b>
+        <span>Ref. Area</span><b id="oS"></b><span>Char. Length</span><b id="oL"></b></div>
+      </div>
+      <div class="card"><h4>Simulation Data <span class="est">(Estimated)</span></h4>
+        <div class="dgrid" id="aeroData"></div>
+      </div>
+      <div class="card"><h4>How It Works</h4>
+        <p style="font-size:.82rem;color:var(--muted);line-height:1.6;margin:0">
+        <b>Lift</b>: gaya tegak lurus arah aliran udara yang mengangkat objek.
+        <b>Drag</b>: gaya hambat searah aliran yang melawan gerak objek.
+        <b>Pressure</b>: perbedaan tekanan udara di permukaan objek akibat aliran.
+        <b>Angle of Attack</b>: sudut antara objek dan arah aliran udara.
+        <b>Reynolds Number</b>: rasio gaya inersia terhadap gaya viskos, menentukan jenis aliran (laminar/transisi/turbulen).
+        <b>Mach Number</b>: rasio kecepatan objek terhadap kecepatan suara, menentukan rezim subsonic hingga hypersonic.</p>
+      </div>
+    </div>
+  </div>`;
+  document.getElementById('oName').textContent=preset.name;
+  document.getElementById('oSrc').textContent=source;
+  document.getElementById('oS').textContent=preset.S+' m²';
+  document.getElementById('oL').textContent=preset.L+' m';
+  document.getElementById('aeroBadge').textContent=source==='Generated Primitive'?'Approximate educational model':source;
+  aero.t=0;aero.data=[];
+  aeroInitScene(preset.type);
+  aeroComputeAndRender();
+}
+function aeroSet(k,v){aero.params[k]=parseFloat(v);const el1=document.getElementById('v_'+k),el2=document.getElementById('num_'+k);if(el1)el1.textContent=v;if(el2)el2.value=v;aeroComputeAndRender()}
+function aeroSetQuality(q){aero.params.quality=q;aeroBuildParticles()}
+
+function aeroInitScene(type){
+  const canvas=document.getElementById('aero3d');
+  if(typeof THREE==='undefined'){canvas.parentElement.innerHTML='<p style="padding:20px;color:var(--muted)">Three.js gagal dimuat — periksa koneksi internet.</p>';return;}
+  if(aero.raf)cancelAnimationFrame(aero.raf);
+  if(aero.renderer)aero.renderer.dispose();
+  const w=canvas.clientWidth||600,h=380;
+  aero.scene=new THREE.Scene();
+  aero.camera=new THREE.PerspectiveCamera(50,w/h,0.1,1000);aero.camera.position.set(6,4,8);
+  aero.renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});aero.renderer.setSize(w,h);aero.renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  aero.controls=new THREE.OrbitControls(aero.camera,canvas);aero.controls.enableDamping=true;
+  aero.scene.add(new THREE.AmbientLight(0x88aacc,0.7));
+  const dl=new THREE.DirectionalLight(0xffffff,0.8);dl.position.set(5,8,5);aero.scene.add(dl);
+  window.aeroGrid=new THREE.GridHelper(14,14,0x2ee6d6,0x12283f);aero.scene.add(aeroGrid);
+  window.aeroAxes=new THREE.AxesHelper(4);aero.scene.add(aeroAxes);
+  aero.mesh=aeroBuildMesh(type);aero.scene.add(aero.mesh);
+  aero.arrowL=new THREE.ArrowHelper(new THREE.Vector3(0,1,0),new THREE.Vector3(0,0,0),1,0x7dffb0,0.3,0.2);
+  aero.arrowD=new THREE.ArrowHelper(new THREE.Vector3(-1,0,0),new THREE.Vector3(0,0,0),1,0xff6b6b,0.3,0.2);
+  aero.scene.add(aero.arrowL,aero.arrowD);
+  aeroBuildParticles();
+  aeroRenderLoop();
+}
+function aeroBuildMesh(type){
+  const grp=new THREE.Group();const mat=new THREE.MeshStandardMaterial({color:0x5aa9ff,metalness:0.2,roughness:0.5});
+  if(type==='plane'){
+    const body=new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.25,3,10),mat);
+    body.rotation.z=Math.PI/2;grp.add(body);
+    const wing=new THREE.Mesh(new THREE.BoxGeometry(2.6,0.06,0.6),mat);grp.add(wing);
+    const tail=new THREE.Mesh(new THREE.BoxGeometry(0.6,0.06,0.3),mat);tail.position.set(-1.3,0,0);grp.add(tail);
+    const vtail=new THREE.Mesh(new THREE.BoxGeometry(0.4,0.5,0.06),mat);vtail.position.set(-1.3,0.25,0);grp.add(vtail);
+  } else if(type==='wing'){grp.add(new THREE.Mesh(new THREE.BoxGeometry(3,0.1,1),mat));}
+  else if(type==='car'){
+    const body=new THREE.Mesh(new THREE.BoxGeometry(2.2,0.5,1),mat);grp.add(body);
+    const roof=new THREE.Mesh(new THREE.BoxGeometry(1.1,0.4,0.9),mat);roof.position.y=0.45;grp.add(roof);
+  } else if(type==='sphere'){grp.add(new THREE.Mesh(new THREE.SphereGeometry(0.8,24,18),mat));}
+  else if(type==='cylinder'){const c=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.5,1.6,20),mat);c.rotation.z=Math.PI/2;grp.add(c);}
+  else{grp.add(new THREE.Mesh(new THREE.BoxGeometry(1.2,1.2,1.2),mat));}
+  grp.userData.mat=mat;return grp;
+}
+function aeroTogglePressure(v){
+  aero.pressure=v;
+  if(!aero.mesh)return;
+  aero.mesh.traverse(o=>{if(o.isMesh){
+    if(v){
+      const g=o.geometry;if(!g.attributes.color){const pos=g.attributes.position,colors=[];
+        for(let i=0;i<pos.count;i++){const nx=pos.getX(i);const c=nx>0?new THREE.Color(0xff6b6b):new THREE.Color(0x5aa9ff);colors.push(c.r,c.g,c.b);}
+        g.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));}
+      o.material.vertexColors=true;o.material.needsUpdate=true;
+    } else {o.material.vertexColors=false;o.material.color.set(0x5aa9ff);o.material.needsUpdate=true;}
+  }});
+}
+function aeroBuildParticles(){
+  if(aero.particles){aero.scene.remove(aero.particles);}
+  const n=aero.params.quality==='low'?120:aero.params.quality==='high'?600:300;
+  const geo=new THREE.BufferGeometry();const pos=new Float32Array(n*3);aero._pv=new Float32Array(n);
+  for(let i=0;i<n;i++){pos[i*3]=-7+Math.random()*14;pos[i*3+1]=(Math.random()-0.5)*3;pos[i*3+2]=(Math.random()-0.5)*3;aero._pv[i]=0.5+Math.random()*0.5;}
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  const mat=new THREE.PointsMaterial({color:0x2ee6d6,size:0.05,transparent:true,opacity:0.75});
+  aero.particles=new THREE.Points(geo,mat);aero.scene.add(aero.particles);
+}
+function aeroStart(){aero.running=true}
+function aeroPause(){aero.running=false}
+function aeroStep(){aero.t+=0.05;aeroComputeAndRender()}
+function aeroReset(){aero.t=0;aero.data=[];aero.running=false;aeroComputeAndRender()}
+function aeroResetView(){if(aero.camera){aero.camera.position.set(6,4,8);aero.controls.update()}}
+function aeroClearChart(){aero.data=[];aeroDrawChart()}
+function stopAero(){aero.running=false;if(aero.raf)cancelAnimationFrame(aero.raf);aero.raf=null}
+
+function aeroPhysics(){
+  const p=aero.params;const aoaRad=p.aoa*Math.PI/180;
+  const rho=p.rho*Math.exp(-p.alt/8500);
+  const q=0.5*rho*p.v*p.v;
+  const base=aero.preset.base||{cl:0.2,cd:0.3};
+  const CL=base.cl+aoaRad*3.6; const CD=base.cd+Math.abs(aoaRad)*0.9;
+  const L=q*p.S*CL,D=q*p.S*CD;
+  const mu=1.81e-5;const Re=(rho*p.v*p.L)/mu;
+  const soundSpeed=331.3*Math.sqrt(1+(p.temp)/273.15);
+  const mach=p.v/soundSpeed;
+  let regime=mach<0.8?'Subsonic':mach<1.2?'Transonic':mach<5?'Supersonic':'Hypersonic';
+  let flow=Re<2000?'laminar (pendekatan)':Re<4000?'transisi (pendekatan)':'turbulen (pendekatan)';
+  return {q,CL,CD,L,D,Re,mach,regime,flow,rho};
+}
+function aeroComputeAndRender(){
+  const r=aeroPhysics();
+  aero.data.push({t:aero.t,L:r.L,D:r.D});if(aero.data.length>250)aero.data.shift();
+  const el=document.getElementById('aeroData');if(el)el.innerHTML=`
+   <span>Velocity</span><b>${aero.params.v.toFixed(0)} m/s</b>
+   <span>Angle of Attack</span><b>${aero.params.aoa}°</b>
+   <span>Air Density</span><b>${r.rho.toFixed(3)} kg/m³</b>
+   <span>Dynamic Pressure</span><b>${r.q.toFixed(1)} Pa</b>
+   <span>Reynolds Number</span><b>${r.Re.toExponential(2)} (${r.flow})</b>
+   <span>Mach Number</span><b>${r.mach.toFixed(2)} (${r.regime})</b>
+   <span>Lift</span><b>${r.L.toFixed(1)} N</b>
+   <span>Drag</span><b>${r.D.toFixed(1)} N</b>
+   <span>Lift Coeff. (CL)</span><b>${r.CL.toFixed(3)}</b>
+   <span>Drag Coeff. (CD)</span><b>${r.CD.toFixed(3)}</b>`;
+  if(aero.mesh)aero.mesh.rotation.z=-aero.params.aoa*Math.PI/180*0.5;
+  if(aero.arrowL){aero.arrowL.visible=aero.showLift;aero.arrowL.setLength(0.3+Math.min(3,Math.abs(r.L)/2000),0.3,0.15);}
+  if(aero.arrowD){aero.arrowD.visible=aero.showDrag;aero.arrowD.setLength(0.3+Math.min(3,Math.abs(r.D)/2000),0.3,0.15);}
+  aeroDrawChart();
+}
+function aeroDrawChart(){
+  const c=document.getElementById('aerochart');if(!c)return;c.width=c.clientWidth;
+  const ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);
+  const data=aero.data;if(data.length<2)return;
+  const W=c.width,H=c.height;
+  const Ls=data.map(d=>d.L),Ds=data.map(d=>d.D);
+  const maxV=Math.max(...Ls,...Ds,1),minV=Math.min(...Ls,...Ds,0);
+  function line(vals,color){ctx.strokeStyle=color;ctx.lineWidth=2;ctx.beginPath();
+    vals.forEach((v,i)=>{const x=i/(data.length-1)*W,y=H-8-((v-minV)/(maxV-minV+0.001))*(H-16);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)});ctx.stroke();}
+  line(Ls,'#7dffb0');line(Ds,'#ff6b6b');
+  ctx.font='10px monospace';ctx.fillStyle='#7dffb0';ctx.fillText('Lift (N)',8,12);ctx.fillStyle='#ff6b6b';ctx.fillText('Drag (N)',8,24);
+}
+function aeroRenderLoop(){
+  if(!aero.renderer)return;
+  if(aero.running){
+    aero.t+=0.02;
+    const speedFactor=Math.min(3,aero.params.v/100);
+    if(aero.particles&&aero.showFlow){
+      const pos=aero.particles.geometry.attributes.position;
+      for(let i=0;i<pos.count;i++){let x=pos.getX(i)+0.06*speedFactor*aero._pv[i]*4;if(x>7){x=-7;}pos.setX(i,x);}
+      pos.needsUpdate=true;
+    }
+    aeroComputeAndRender();
+  }
+  aero.particles.visible=aero.showFlow;
+  aero.controls.update();aero.renderer.render(aero.scene,aero.camera);
+  document.getElementById('perf').textContent=`FPS: ${Math.round(1000/16)} | Sim: ${aero.t.toFixed(1)}s`;
+  aero.raf=requestAnimationFrame(aeroRenderLoop);
+}
+function aeroHandleUpload(ev){
+  const file=ev.target.files[0];if(!file)return;
+  const ext=file.name.split('.').pop().toLowerCase();
+  const url=URL.createObjectURL(file);
+  const finish=(obj)=>{
+    aero.preset={name:file.name,type:'custom',S:2,L:2,base:{cl:0.15,cd:0.4}};
+    aeroLoadObject(aero.preset,'Custom Uploaded Model');
+    setTimeout(()=>{ if(aero.mesh){aero.scene.remove(aero.mesh);} obj.scale.setScalar(2/(new THREE.Box3().setFromObject(obj).getSize(new THREE.Vector3()).length()||1));
+      aero.mesh=obj;aero.scene.add(obj);},50);
+  };
+  try{
+    if(ext==='glb'||ext==='gltf'){new THREE.GLTFLoader().load(url,g=>finish(g.scene),undefined,()=>alert('Gagal memuat file GLTF/GLB.'));}
+    else if(ext==='obj'){new THREE.OBJLoader().load(url,o=>finish(o),undefined,()=>alert('Gagal memuat file OBJ.'));}
+    else if(ext==='stl'){new THREE.STLLoader().load(url,g=>{const m=new THREE.Mesh(g,new THREE.MeshStandardMaterial({color:0x5aa9ff}));finish(m);},undefined,()=>alert('Gagal memuat file STL.'));}
+    else{alert('Format tidak didukung. Gunakan .glb, .gltf, .obj, atau .stl');}
+  }catch(e){alert('Model tidak dapat dibaca browser ini.');}
+}
+</script>
+</body>
+</html>
